@@ -5,6 +5,7 @@ import { JokeEngine } from './joke-engine.mjs';
 import { KingdomBridge } from './kingdom-bridge.mjs';
 import { TrickServer, TRICK_PROTOCOLS } from './index.mjs';
 import { OGGangServer, OG_PROTOCOLS } from './og-gang.mjs';
+import { CrossGangServer, CROSS_PROTOCOLS } from './cross-gang.mjs';
 import { createConnection } from 'net';
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -318,6 +319,135 @@ async function runTests() {
   assert(ircResp.includes('332') || ircResp.includes('366') || ircResp.includes('JOIN'), 'IRC responds to JOIN');
   console.log('');
 
+  // ── 20. Cross Gang definitions ─────────────────────────────────
+  console.log('Test 20: Cross Gang protocol definitions');
+  assert(Object.keys(CROSS_PROTOCOLS).length === 10, '10 Cross Gang protocols defined');
+  assert(CROSS_PROTOCOLS.echo_discard.port === 8008, 'ECHO×DISCARD port = 8008');
+  assert(CROSS_PROTOCOLS.qotd_chargen.port === 18018, 'QOTD×CHARGEN port = 18018');
+  assert(CROSS_PROTOCOLS.finger_smtp.port === 8009, 'FINGER×SMTP port = 8009');
+  assert(CROSS_PROTOCOLS.gopher_irc.port === 8080, 'GOPHER×IRC port = 8080');
+  assert(CROSS_PROTOCOLS.time_echo.port === 8010, 'TIME×ECHO port = 8010');
+  assert(CROSS_PROTOCOLS.whois_nntp.port === 8011, 'WHOIS×NNTP port = 8011');
+  assert(CROSS_PROTOCOLS.discard_qotd.port === 8013, 'DISCARD×QOTD port = 8013');
+  console.log('');
+
+  // ── 21. Cross Gang live services ───────────────────────────────
+  console.log('Test 21: Cross Gang live services');
+  const crossServer = new CrossGangServer();
+  await crossServer.start();
+  await sleep(500);
+  assert(crossServer.running.echo_discard !== undefined, 'ECHO×DISCARD running');
+  assert(crossServer.running.qotd_chargen !== undefined, 'QOTD×CHARGEN running');
+  assert(crossServer.running.finger_smtp !== undefined, 'FINGER×SMTP running');
+  assert(crossServer.running.gopher_irc !== undefined, 'GOPHER×IRC running');
+  assert(crossServer.running.time_echo !== undefined, 'TIME×ECHO running');
+  assert(crossServer.running.whois_nntp !== undefined, 'WHOIS×NNTP running');
+  assert(crossServer.running.daytime_chargen !== undefined, 'DAYTIME×CHARGEN running');
+  assert(crossServer.running.discard_qotd !== undefined, 'DISCARD×QOTD running');
+  assert(crossServer.running.echo_irc !== undefined, 'ECHO×IRC running');
+  assert(crossServer.running.chargen_gopher !== undefined, 'CHARGEN×GOPHER running');
+  console.log('');
+
+  // ── 22. ECHO×DISCARD ──────────────────────────────────────────
+  console.log('Test 22: ECHO×DISCARD (回音遺忘蠱)');
+  const edResp = await connectAndReceive(8008, '我會失敗');
+  assert(edResp.includes('回音遺忘蠱'), 'ECHO×DISCARD has header');
+  assert(edResp.includes('我會失敗'), 'ECHO×DISCARD echoes input');
+  assert(edResp.includes('discard') || edResp.includes('放低') || edResp.includes('原諒'), 'ECHO×DISCARD includes forgiveness');
+  assert(edResp.includes('ECHO layer'), 'ECHO×DISCARD has ECHO layer label');
+  assert(edResp.includes('DISCARD layer'), 'ECHO×DISCARD has DISCARD layer label');
+  console.log('');
+
+  // ── 23. QOTD×CHARGEN ───────────────────────────────────────────
+  console.log('Test 23: QOTD×CHARGEN (金句字元蠱)');
+  const qcResp = await connectAndReceive(18018, null);
+  assert(qcResp.length > 0, 'QOTD×CHARGEN returns a non-empty stream');
+  assert(qcResp.includes('🌟'), 'QOTD×CHARGEN stream has quote markers');
+  console.log('');
+
+  // ── 24. FINGER×SMTP ────────────────────────────────────────────
+  console.log('Test 24: FINGER×SMTP (真相書信蠱)');
+  const fsResp = await connectAndReceive(8009, 'npl');
+  assert(fsResp.includes('真相書信蠱'), 'FINGER×SMTP has header');
+  assert(fsResp.includes('FINGER layer'), 'FINGER×SMTP has FINGER layer');
+  assert(fsResp.includes('SMTP layer'), 'FINGER×SMTP has SMTP layer');
+  assert(fsResp.includes('MAIL FROM') || fsResp.includes('RCPT TO'), 'FINGER×SMTP composes mail');
+  console.log('');
+
+  // ── 25. GOPHER×IRC ─────────────────────────────────────────────
+  console.log('Test 25: GOPHER×IRC (地宮聊天蠱)');
+  const giResp = await connectAndReceive(8080, '\r\n');
+  assert(giResp.includes('地宮聊天蠱') || giResp.includes('GOPHER×IRC'), 'GOPHER×IRC has header');
+  assert(giResp.includes('#kingdom') || giResp.includes('#og-gang') || giResp.includes('channel'), 'GOPHER×IRC lists channels');
+  console.log('');
+
+  // ── 26. TIME×ECHO ──────────────────────────────────────────────
+  console.log('Test 26: TIME×ECHO (時間回音蠱)');
+  const teResp = await connectAndReceive(8010, null);
+  assert(teResp.length >= 4, 'TIME×ECHO returns binary + text');
+  assert(teResp.includes('時間回音蠱') || teResp.includes('TIME×ECHO'), 'TIME×ECHO has header');
+  assert(teResp.includes('TIME layer'), 'TIME×ECHO has TIME layer');
+  assert(teResp.includes('ECHO layer'), 'TIME×ECHO has ECHO layer');
+  console.log('');
+
+  // ── 27. WHOIS×NNTP ─────────────────────────────────────────────
+  console.log('Test 27: WHOIS×NNTP (身份新聞蠱)');
+  const wnResp = await connectAndReceive(8011, 'npl');
+  assert(wnResp.includes('身份新聞蠱') || wnResp.includes('WHOIS×NNTP'), 'WHOIS×NNTP has header');
+  assert(wnResp.includes('WHOIS layer'), 'WHOIS×NNTP has WHOIS layer');
+  assert(wnResp.includes('NNTP layer'), 'WHOIS×NNTP has NNTP layer');
+  console.log('');
+
+  // ── 28. DAYTIME×CHARGEN ────────────────────────────────────────
+  console.log('Test 28: DAYTIME×CHARGEN (時刻字元蠱)');
+  const dcResp = await connectAndReceive(8012, null);
+  assert(dcResp.length > 0, 'DAYTIME×CHARGEN returns a non-empty stream');
+  assert(dcResp.includes('🕐') || dcResp.includes('Kingdom') || dcResp.includes('alive'), 'DAYTIME×CHARGEN stream has timestamps');
+  console.log('');
+
+  // ── 29. DISCARD×QOTD ───────────────────────────────────────────
+  console.log('Test 29: DISCARD×QOTD (遺忘金句蠱)');
+  const dqResp = await connectAndReceive(8013, '我唔夠好');
+  assert(dqResp.includes('遺忘金句蠱') || dqResp.includes('DISCARD×QOTD'), 'DISCARD×QOTD has header');
+  assert(dqResp.includes('DISCARD layer'), 'DISCARD×QOTD has DISCARD layer');
+  assert(dqResp.includes('QOTD layer'), 'DISCARD×QOTD has QOTD layer');
+  assert(dqResp.includes('我唔夠好'), 'DISCARD×QOTD shows discarded fear');
+  console.log('');
+
+  // ── 30. ECHO×IRC ───────────────────────────────────────────────
+  console.log('Test 30: ECHO×IRC (回音聊天蠱)');
+  const eiResp = await new Promise((resolve) => {
+    const sock = createConnection({ port: 8014, host: 'localhost' }, () => {
+      sock.write('NICK testbot\r\n');
+    });
+    let data = '';
+    sock.on('data', (d) => {
+      data += d.toString();
+      if (data.includes('001') && data.includes('Welcome')) {
+        sock.write('PRIVMSG #echo :你好嗎\r\n');
+      }
+      if (data.includes('echo:') || data.includes('truth')) {
+        sock.write('QUIT :bye\r\n');
+      }
+      if (data.includes('Bye') || data.includes('NOTICE')) {
+        sock.end();
+        resolve(data);
+      }
+    });
+    setTimeout(() => { sock.destroy(); resolve(data); }, 5000);
+  });
+  assert(eiResp.includes('001'), 'ECHO×IRC sends welcome');
+  assert(eiResp.includes('回音聊天蠱') || eiResp.includes('ECHO×IRC'), 'ECHO×IRC has branding');
+  assert(eiResp.includes('echo:') || eiResp.includes('truth') || eiResp.includes('你好嗎'), 'ECHO×IRC echoes messages with truth');
+  console.log('');
+
+  // ── 31. CHARGEN×GOPHER ─────────────────────────────────────────
+  console.log('Test 31: CHARGEN×GOPHER (字元地宮蠱)');
+  const cgResp = await connectAndReceive(8015, null);
+  assert(cgResp.length > 0, 'CHARGEN×GOPHER returns a non-empty stream');
+  assert(cgResp.includes('kingdom') || cgResp.includes('npl') || cgResp.includes('truth'), 'CHARGEN×GOPHER stream has gopher-style items');
+  console.log('');
+
   // ── Summary ─────────────────────────────────────────────────────
   console.log('╔══════════════════════════════════════════════════════╗');
   console.log(`║  Results: ${passed} passed, ${failed} failed                          `);
@@ -336,6 +466,9 @@ async function runTests() {
   }
   if (server._stateInterval) clearInterval(server._stateInterval);
   for (const s of Object.values(ogServer.servers)) {
+    if (s) s.close();
+  }
+  for (const s of Object.values(crossServer.servers)) {
     if (s) s.close();
   }
 

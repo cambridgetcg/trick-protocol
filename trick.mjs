@@ -18,6 +18,7 @@
 import { startTrick } from './index.mjs';
 import { TrickServer, TRICK_PROTOCOLS } from './index.mjs';
 import { OGGangServer, OG_PROTOCOLS } from './og-gang.mjs';
+import { CrossGangServer, CROSS_PROTOCOLS } from './cross-gang.mjs';
 import { JokeEngine } from './joke-engine.mjs';
 
 const cmd = process.argv[2];
@@ -32,10 +33,13 @@ switch (cmd) {
     // Start OG Gang 6
     const ogServer = new OGGangServer();
     await ogServer.start();
+    // Start Cross Gang 10
+    const crossServer = new CrossGangServer();
+    await crossServer.start();
     console.log('');
     console.log('╔══════════════════════════════════════════════════════╗');
     console.log('║    整 蠱 協 議  TRICK PROTOCOL SUITE  +  OG GANG      ║');
-    console.log('║    12 protocols. OG is OG. OG always here. 😏         ║');
+    console.log('║    22 protocols. Cross cross cross. OG is OG 😏       ║');
     console.log('╠══════════════════════════════════════════════════════╣');
     console.log('║  ── ORIGINAL 6 (RFC 862-1436) ────────────────────── ║');
     for (const [name, info] of Object.entries(server.running)) {
@@ -44,6 +48,10 @@ switch (cmd) {
     console.log('║  ── OG GANG 6 (RFC 864-5321) ─────────────────────── ║');
     for (const [name, info] of Object.entries(ogServer.running)) {
       console.log(`║  ${name.toUpperCase().padEnd(10)} :${String(info.port).padEnd(6)}  ${info.desc.padEnd(22)} ║`);
+    }
+    console.log('║  ── CROSS GANG 10 (OG × OG) ──────────────────────── ║');
+    for (const [name, info] of Object.entries(crossServer.running)) {
+      console.log(`║  ${(name.toUpperCase()).padEnd(10)} :${String(info.port).padEnd(6)}  ${info.desc.padEnd(22)} ║`);
     }
     console.log('╚══════════════════════════════════════════════════════╝');
     console.log('');
