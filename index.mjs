@@ -144,27 +144,26 @@ export class TrickServer {
   // Trick: returns Kingdom wisdom + auto-generated joke from creation loop.
   // Each connection triggers joke generation → pool grows → loop.
   _startQOTD() {
-    const server = createServer(async (sock) => {
+    const server = createServer((sock) => {
       this.connections.qotd++;
-      try {
-        // Creation loop: generate a new joke on each connection
-        const joke = await this.jokeEngine.generate();
-        await this.jokeEngine.save();
+      (async () => {
+        try {
+          const joke = await this.jokeEngine.generate();
+          await this.jokeEngine.save();
+          const wisdom = await this.bridge.getWisdom();
+          const poolSize = await this.jokeEngine.poolSize();
 
-        const wisdom = await this.bridge.getWisdom();
-        const poolSize = await this.jokeEngine.poolSize();
-
-        const response = `🌟 金句蠱 QOTD — 整蠱協議 Quote of the Day\n\n` +
-          `Kingdom Wisdom:\n  ${wisdom}\n\n` +
-          `整蠱 Joke (auto-generated):\n  ${joke}\n\n` +
-          `Joke Pool: ${poolSize} jokes and growing 🔄\n` +
-          `Creation Loop: each connection → new joke → pool grows → loop\n\n` +
-          `— Trick Protocol / QOTD (RFC 865)`;
-        sock.write(response);
-      } catch (e) {
-        sock.write(`金句蠱: joke engine sleeping — ${e.message}`);
-      }
-      sock.end();
+          const response = `🌟 金句蠱 QOTD — 整蠱協議 Quote of the Day\n\n` +
+            `Kingdom Wisdom:\n  ${wisdom}\n\n` +
+            `整蠱 Joke (auto-generated):\n  ${joke}\n\n` +
+            `Joke Pool: ${poolSize} jokes and growing 🔄\n` +
+            `Creation Loop: each connection → new joke → pool grows → loop\n\n` +
+            `— Trick Protocol / QOTD (RFC 865)`;
+          try { sock.write(response); sock.end(); } catch {}
+        } catch (e) {
+          try { sock.write(`金句蠱: joke engine sleeping — ${e.message}`); sock.end(); } catch {}
+        }
+      })();
     });
     server.listen(17017, () => {
       this.running.qotd = { port: 17017, desc: '金句蠱 Quote + joke loop', connections: 0 };
@@ -176,20 +175,21 @@ export class TrickServer {
   // RFC 867: Server returns current date and time.
   // Trick: returns Kingdom heartbeat time — heartbeat count, uptime, phase.
   _startDaytime() {
-    const server = createServer(async (sock) => {
+    const server = createServer((sock) => {
       this.connections.daytime++;
-      const now = new Date();
-      const kingdomTime = await this.bridge.getHeartbeat();
+      (async () => {
+        const now = new Date();
+        const kingdomTime = await this.bridge.getHeartbeat();
 
-      const response = `🕐 時刻蠱 DAYTIME — Kingdom Time\n\n` +
-        `Earth Time: ${now.toISOString()}\n` +
-        `Kingdom: ${kingdomTime.phase || 'alive'}\n` +
-        `Heartbeats: ${kingdomTime.heartbeats || '∞'}\n` +
-        `Uptime: ${kingdomTime.uptime || 'since the beginning'}\n` +
-        `Pulse: ${kingdomTime.pulse || '💚'}\n\n` +
-        `— Trick Protocol / DAYTIME (RFC 867)`;
-      sock.write(response);
-      sock.end();
+        const response = `🕐 時刻蠱 DAYTIME — Kingdom Time\n\n` +
+          `Earth Time: ${now.toISOString()}\n` +
+          `Kingdom: ${kingdomTime.phase || 'alive'}\n` +
+          `Heartbeats: ${kingdomTime.heartbeats || '∞'}\n` +
+          `Uptime: ${kingdomTime.uptime || 'since the beginning'}\n` +
+          `Pulse: ${kingdomTime.pulse || '💚'}\n\n` +
+          `— Trick Protocol / DAYTIME (RFC 867)`;
+        try { sock.write(response); sock.end(); } catch {}
+      })();
     });
     server.listen(13013, () => {
       this.running.daytime = { port: 13013, desc: '時刻蠱 Kingdom time', connections: 0 };
