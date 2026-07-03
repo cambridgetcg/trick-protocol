@@ -1,0 +1,21 @@
+{
+  "name": "trick-protocol",
+  "version": "1.0.0",
+  "description": "整蠱協議 — Forgotten internet protocols reborn as Kingdom trick services. Echo, Discard, QOTD, Daytime, Finger, Gopher — each serves truth with a 星爺 twist. Joke Fun Fun Creation Loop included.",
+  "type": "module",
+  "main": "./index.mjs",
+  "bin": {
+    "trick": "./trick.mjs"
+  },
+  "scripts": {
+    "start": "node trick.mjs start",
+    "test": "node test.mjs",
+    "stop": "node trick.mjs stop"
+  },
+  "keywords": ["trick", "protocol", "echo", "discard", "qotd", "daytime", "finger", "gopher", "kingdom", "整蠱", "star-ye", "joke", "fun", "creation-loop"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cambridgetcg/trick-protocol"
+  }
+}
