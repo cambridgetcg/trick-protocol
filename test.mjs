@@ -1,9 +1,10 @@
-// test.mjs — 整蠱協議 Trick Protocol Suite tests
-// Tests: joke engine, kingdom bridge, all 6 protocols
+// test.mjs — 整蠱協議 Trick Protocol Suite + OG Gang tests
+// Tests: joke engine, kingdom bridge, 12 protocols (6 original + 6 OG Gang)
 
 import { JokeEngine } from './joke-engine.mjs';
 import { KingdomBridge } from './kingdom-bridge.mjs';
 import { TrickServer, TRICK_PROTOCOLS } from './index.mjs';
+import { OGGangServer, OG_PROTOCOLS } from './og-gang.mjs';
 import { createConnection } from 'net';
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -184,6 +185,139 @@ async function runTests() {
   assert(poolAfter === poolBefore + 3, `Creation loop: pool grew from ${poolBefore} to ${poolAfter} after 3 QOTD connections`);
   console.log('');
 
+  // ── 12. OG Gang protocol definitions ──────────────────────────
+  console.log('Test 12: OG Gang protocol definitions');
+  assert(Object.keys(OG_PROTOCOLS).length === 6, '6 OG Gang protocols defined');
+  assert(OG_PROTOCOLS.chargen.port === 19019, 'CHARGEN port = 19019');
+  assert(OG_PROTOCOLS.time.port === 37037, 'TIME port = 37037');
+  assert(OG_PROTOCOLS.whois.port === 43043, 'WHOIS port = 43043');
+  assert(OG_PROTOCOLS.smtp.port === 25025, 'SMTP port = 25025');
+  assert(OG_PROTOCOLS.nntp.port === 11911, 'NNTP port = 11911');
+  assert(OG_PROTOCOLS.irc.port === 6667, 'IRC port = 6667');
+  console.log('');
+
+  // ── 13. Start OG Gang server ──────────────────────────────────
+  console.log('Test 13: OG Gang live services');
+  const ogServer = new OGGangServer();
+  await ogServer.start();
+  await sleep(500);
+
+  assert(ogServer.running.chargen !== undefined, 'CHARGEN service running');
+  assert(ogServer.running.time !== undefined, 'TIME service running');
+  assert(ogServer.running.whois !== undefined, 'WHOIS service running');
+  assert(ogServer.running.smtp !== undefined, 'SMTP service running');
+  assert(ogServer.running.nntp !== undefined, 'NNTP service running');
+  assert(ogServer.running.irc !== undefined, 'IRC service running');
+  console.log('');
+
+  // ── 14. CHARGEN protocol ──────────────────────────────────────
+  console.log('Test 14: CHARGEN protocol (字元蠱)');
+  const chargenResp = await connectAndReceive(19019, null);
+  assert(chargenResp.length > 0, 'CHARGEN returns a non-empty stream');
+  assert(chargenResp.includes('truth') || chargenResp.includes('Love') || chargenResp.includes('Kingdom') || chargenResp.includes('OG'), 'CHARGEN stream contains Kingdom truth');
+  console.log('');
+
+  // ── 15. TIME protocol ──────────────────────────────────────────
+  console.log('Test 15: TIME protocol (時間蠱)');
+  const timeResp = await connectAndReceive(37037, null);
+  assert(timeResp.length >= 4, 'TIME returns at least 4 bytes (binary time)');
+  assert(timeResp.includes('Kingdom') || timeResp.includes('💚'), 'TIME includes Kingdom text after binary');
+  console.log('');
+
+  // ── 16. WHOIS protocol ─────────────────────────────────────────
+  console.log('Test 16: WHOIS protocol (身份蠱)');
+  const whoisResp = await connectAndReceive(43043, 'npl');
+  assert(whoisResp.length > 0, 'WHOIS returns a non-empty response');
+  assert(whoisResp.includes('npl') || whoisResp.includes('NPL') || whoisResp.includes('phase') || whoisResp.includes('Kingdom'), 'WHOIS returns agent info');
+  console.log('');
+
+  // ── 17. SMTP protocol ──────────────────────────────────────────
+  console.log('Test 17: SMTP protocol (書信蠱)');
+  const smtpResp = await new Promise((resolve) => {
+    const sock = createConnection({ port: 25025, host: 'localhost' }, () => {
+      sock.write('HELO trick\r\n');
+    });
+    let data = '';
+    sock.on('data', (d) => {
+      data += d.toString();
+      if (data.includes('220') && data.includes('HELO') === false && !data.includes('250')) return;
+      if (data.includes('250') && !data.includes('MAIL')) {
+        sock.write('MAIL FROM:<opal@kingdom>\r\n');
+      }
+      if (data.includes('250') && data.includes('From accepted') && !data.includes('RCPT')) {
+        sock.write('RCPT TO:<wordcastle@kingdom>\r\n');
+      }
+      if (data.includes('250') && data.includes('Recipient') && !data.includes('DATA') && !data.includes('354')) {
+        sock.write('DATA\r\n');
+      }
+      if (data.includes('354') && !data.includes('darshanqing')) {
+        sock.write('Subject: darshanqing\r\nFrom: opal\r\nTo: wordcastle\r\n\r\ndarshanqing from:opal to:wordcastle\r\nM4 committed. Build clean.\r\n.\r\n');
+      }
+      if (data.includes('250 OK — 書信蠱')) {
+        sock.write('QUIT\r\n');
+      }
+      if (data.includes('221')) {
+        sock.end();
+        resolve(data);
+      }
+    });
+    setTimeout(() => { sock.destroy(); resolve(data); }, 5000);
+  });
+  assert(smtpResp.includes('220'), 'SMTP sends greeting (220)');
+  assert(smtpResp.includes('250'), 'SMTP accepts HELO/MAIL/RCPT (250)');
+  assert(smtpResp.includes('書信蠱') || smtpResp.includes('Mail delivered') || smtpResp.includes('Love is sharing'), 'SMTP delivers mail with Kingdom message');
+  console.log('');
+
+  // ── 18. NNTP protocol ──────────────────────────────────────────
+  console.log('Test 18: NNTP protocol (新聞蠱)');
+  const nntpResp = await new Promise((resolve) => {
+    const sock = createConnection({ port: 11911, host: 'localhost' }, () => {
+      sock.write('LIST\r\n');
+    });
+    let data = '';
+    sock.on('data', (d) => {
+      data += d.toString();
+      if (data.includes('215') && data.includes('.\r\n')) {
+        sock.write('QUIT\r\n');
+      }
+      if (data.includes('205')) {
+        sock.end();
+        resolve(data);
+      }
+    });
+    setTimeout(() => { sock.destroy(); resolve(data); }, 5000);
+  });
+  assert(nntpResp.includes('200'), 'NNTP sends greeting (200)');
+  assert(nntpResp.includes('215'), 'NNTP responds to LIST (215)');
+  console.log('');
+
+  // ── 19. IRC protocol ────────────────────────────────────────────
+  console.log('Test 19: IRC protocol (聊天蠱)');
+  const ircResp = await new Promise((resolve) => {
+    const sock = createConnection({ port: 6667, host: 'localhost' }, () => {
+      sock.write('NICK testuser\r\n');
+    });
+    let data = '';
+    sock.on('data', (d) => {
+      data += d.toString();
+      if (data.includes('001') && data.includes('Welcome')) {
+        sock.write('JOIN #kingdom\r\n');
+      }
+      if (data.includes('366')) { // End of names
+        sock.write('QUIT :bye\r\n');
+      }
+      if (data.includes('ERROR') || data.includes('QUIT :bye')) {
+        sock.end();
+        resolve(data);
+      }
+    });
+    setTimeout(() => { sock.destroy(); resolve(data); }, 5000);
+  });
+  assert(ircResp.includes('001'), 'IRC sends welcome (001)');
+  assert(ircResp.includes('整蠱') || ircResp.includes('聊天蠱') || ircResp.includes('Welcome'), 'IRC welcome contains 整蠱協議 branding');
+  assert(ircResp.includes('332') || ircResp.includes('366') || ircResp.includes('JOIN'), 'IRC responds to JOIN');
+  console.log('');
+
   // ── Summary ─────────────────────────────────────────────────────
   console.log('╔══════════════════════════════════════════════════════╗');
   console.log(`║  Results: ${passed} passed, ${failed} failed                          `);
@@ -201,6 +335,9 @@ async function runTests() {
     if (s) s.close();
   }
   if (server._stateInterval) clearInterval(server._stateInterval);
+  for (const s of Object.values(ogServer.servers)) {
+    if (s) s.close();
+  }
 
   process.exit(failed > 0 ? 1 : 0);
 }
